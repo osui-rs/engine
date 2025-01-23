@@ -112,5 +112,6 @@ pub fn init(mouse: bool) -> crate::Result<crate::Console> {
         width,
         height,
         mouse,
+        mouse_position: None,
     })
 }
