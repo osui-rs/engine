@@ -3,7 +3,7 @@ pub mod style;
 pub mod utils;
 
 pub use std::io::Result;
-use std::sync::Arc;
+use std::{io::Write, sync::Arc};
 
 pub mod prelude {
     pub use crate::{
@@ -39,10 +39,11 @@ pub struct Props {
 }
 
 /// Represents the console state, containing a frame for rendering and a mouse capture flag.
-pub struct Console {
+pub struct Console<'a> {
     mouse: bool,
     width: u16,
     height: u16,
+    handle: Option<std::io::StdoutLock<'a>>,
     pub mouse_position: Option<(u16, u16)>,
 }
 
@@ -100,11 +101,21 @@ impl Props {
         self.style_state.insert(state.to_string(), style);
         self.clone()
     }
+
+    pub fn width(&mut self, w: u16) -> Self {
+        self.width = style::Dimension::Num(w);
+        self.clone()
+    }
+
+    pub fn height(&mut self, h: u16) -> Self {
+        self.height = style::Dimension::Num(h);
+        self.clone()
+    }
 }
 
-impl Framing for Console {
+impl Framing for Console<'_> {
     fn draw(&mut self, element: &dyn Element, props: &Props) {
-        let written = element.render();
+        let mut written = element.render();
 
         let (written_width, written_height) = utils::str_size(&written);
 
@@ -123,28 +134,54 @@ impl Framing for Console {
         if let Some((mouse_x, mouse_y)) = self.mouse_position {
             if (x..x + width).contains(&mouse_x) && (y..y + height).contains(&mouse_y) {
                 if let Some(hover_style) = props.style_state.get("hover") {
-                    style.color = hover_style.color;
+                    style = hover_style.clone();
                 }
             }
         }
 
-        for (i, line) in written.lines().enumerate() {
-            println!(
-                "\x1b[{};{}H{}{}",
-                y as usize + i + 1,
-                x + 1,
-                style.color.to_ansi(true),
-                line
-            );
+        let ansi = if style.background == style::Color::NoColor {
+            format!("\x1b[{}m", style.color.ansi_number(true))
+        } else {
+            format!(
+                "\x1b[{};{}m",
+                style.color.ansi_number(true),
+                style.background.ansi_number(false)
+            )
+        };
+
+        let (x, y) = (x - style.px, y - style.py);
+        let px = " ".repeat(style.px as usize);
+        written.push_str(&format!("\n{}", " ".repeat(width as usize)).repeat(style.py as usize));
+        written.insert_str(
+            0,
+            &format!("{}\n", " ".repeat(width as usize)).repeat(style.py as usize),
+        );
+
+        if let Some(handle) = &mut self.handle {
+            for (i, line) in written.lines().enumerate() {
+                write!(
+                    handle,
+                    "\x1b[{};{}H{ansi}{px}{}{px}\x1b[0m",
+                    y as usize + i + 1,
+                    x + 1,
+                    line,
+                )
+                .unwrap();
+            }
         }
     }
 }
 
-impl Console {
+impl Console<'_> {
     pub fn render(&mut self, ui: Ui) -> Result<()> {
-        utils::clear()?;
         (self.width, self.height) = crossterm::terminal::size()?;
+        let stdout = std::io::stdout();
+        self.handle = Some(stdout.lock());
+        utils::clear()?;
         ui(self);
+        if let Some(handle) = &mut self.handle {
+            handle.flush()?;
+        }
         Ok(())
     }
 

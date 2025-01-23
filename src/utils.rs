@@ -100,7 +100,7 @@ pub fn str_size(s: &str) -> (u16, u16) {
 ///
 /// # Returns
 /// A `Console` instance wrapped in a `Result`.
-pub fn init(mouse: bool) -> crate::Result<crate::Console> {
+pub fn init<'a>(mouse: bool) -> crate::Result<crate::Console<'a>> {
     crossterm::terminal::enable_raw_mode()?;
     clear()?;
     hide_cursor()?;
@@ -112,6 +112,20 @@ pub fn init(mouse: bool) -> crate::Result<crate::Console> {
         width,
         height,
         mouse,
+        handle: None,
         mouse_position: None,
     })
+}
+
+pub fn calculate_padding(string_length: usize, width: usize) -> (usize, usize) {
+    if width <= string_length {
+        // No padding needed if the string length is greater than or equal to the width
+        return (0, 0);
+    }
+
+    let total_padding = width - string_length;
+    let left_padding = total_padding / 2; // Floor division for left padding
+    let right_padding = total_padding - left_padding; // Remaining for right padding
+
+    (left_padding, right_padding)
 }

@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {
     NoColor,
     Black,
@@ -22,10 +22,37 @@ pub enum Color {
 
 impl Color {
     /// Converts the enum to its ANSI escape code
+    pub fn ansi_number(&self, fg: bool) -> String {
+        let f = if fg { "3" } else { "4" };
+        match self {
+            Self::NoColor => String::new(),
+            Self::Black => format!("{f}0"),
+            Self::Red => format!("{f}1"),
+            Self::Green => format!("{f}2"),
+            Self::Yellow => format!("{f}3"),
+            Self::Blue => format!("{f}4"),
+            Self::Magenta => format!("{f}5"),
+            Self::Cyan => format!("{f}6"),
+            Self::White => format!("{f}7"),
+            Self::BrightBlack => format!("{f}90"),
+            Self::BrightRed => format!("{f}91"),
+            Self::BrightGreen => format!("{f}92"),
+            Self::BrightYellow => format!("{f}93"),
+            Self::BrightBlue => format!("{f}94"),
+            Self::BrightMagenta => format!("{f}95"),
+            Self::BrightCyan => format!("{f}96"),
+            Self::BrightWhite => format!("{f}97"),
+            Self::Rgb(r, g, b) => {
+                let code = if fg { "38" } else { "48" };
+                format!("{code};2;{r};{g};{b}")
+            }
+        }
+    }
+
     pub fn to_ansi(&self, foreground: bool) -> String {
         let f = if foreground { "3" } else { "4" };
         match self {
-            Self::NoColor => format!("\x1b[0m"),
+            Self::NoColor => String::new(),
             Self::Black => format!("\x1b[{f}0m"),
             Self::Red => format!("\x1b[{f}1m"),
             Self::Green => format!("\x1b[{f}2m"),
@@ -44,7 +71,7 @@ impl Color {
             Self::BrightWhite => format!("\x1b[{f}97m"),
             Self::Rgb(r, g, b) => {
                 let code = if foreground { "38" } else { "48" };
-                format!("\x1b[{};2;{};{};{}m", code, r, g, b)
+                format!("\x1b[{code};2;{r};{g};{b}m")
             }
         }
     }
@@ -56,9 +83,12 @@ impl Default for Color {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Style {
     pub color: Color,
+    pub background: Color,
+    pub px: u16,
+    pub py: u16,
 }
 
 #[derive(Debug, Clone, Copy)]

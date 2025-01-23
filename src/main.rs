@@ -9,16 +9,15 @@ fn main() -> Result<()> {
 
     loop {
         console.render(ui.clone())?;
-        if let crossterm::event::Event::Mouse(crossterm::event::MouseEvent {
-            kind: crossterm::event::MouseEventKind::Moved,
-            row,
-            column,
-            ..
-        }) = crossterm::event::read()?
-        {
-            console.mouse_position = Some((column, row));
-        } else {
-            break;
+        match crossterm::event::read()? {
+            crossterm::event::Event::Mouse(crossterm::event::MouseEvent {
+                kind: crossterm::event::MouseEventKind::Moved,
+                row,
+                column,
+                ..
+            }) => console.mouse_position = Some((column, row)),
+            crossterm::event::Event::Resize(_, _) => {}
+            _ => break,
         }
     }
 
@@ -29,7 +28,12 @@ pub fn app() -> Ui {
     Arc::new(|frame| {
         frame.draw(
             &"Hello, World",
-            &Props::center().state("hover", Style { color: Color::Blue }),
+            &Props::center().state("hover", Style {
+                color: Color::Red,
+                background: Color::Red,
+                px: 1,
+                py: 0,
+            }),
         );
     })
 }
