@@ -20,9 +20,6 @@ pub trait Framing {
 
 pub trait Element {
     fn render(&self) -> String;
-    fn get_colors(&self) -> std::collections::HashMap<String, (style::Color, bool)> {
-        std::collections::HashMap::new()
-    }
 }
 
 // Types
@@ -59,6 +56,10 @@ impl Props {
         }
     }
 
+    pub fn auto() -> Self {
+        Self::new(0, 0)
+    }
+
     pub fn center() -> Self {
         Self {
             x: style::Position::Center,
@@ -92,6 +93,16 @@ impl Props {
         }
     }
 
+    pub fn x_percent(&mut self, p: u16) -> Self {
+        self.x = style::Position::Percent(p);
+        self.clone()
+    }
+
+    pub fn y_percent(&mut self, p: u16) -> Self {
+        self.y = style::Position::Percent(p);
+        self.clone()
+    }
+
     pub fn style(&mut self, style: style::Style) -> Self {
         self.style = style;
         self.clone()
@@ -109,6 +120,16 @@ impl Props {
 
     pub fn height(&mut self, h: u16) -> Self {
         self.height = style::Dimension::Num(h);
+        self.clone()
+    }
+
+    pub fn width_percent(&mut self, w: u16) -> Self {
+        self.width = style::Dimension::Percent(w);
+        self.clone()
+    }
+
+    pub fn height_percent(&mut self, h: u16) -> Self {
+        self.height = style::Dimension::Percent(h);
         self.clone()
     }
 }
@@ -168,6 +189,8 @@ impl Framing for Console<'_> {
                 )
                 .unwrap();
             }
+        } else {
+            panic!("Handle not found");
         }
     }
 }

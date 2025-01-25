@@ -23,30 +23,36 @@ pub enum Color {
 impl Color {
     /// Converts the enum to its ANSI escape code
     pub fn ansi_number(&self, fg: bool) -> String {
-        let f = if fg { "3" } else { "4" };
-        match self {
-            Self::NoColor => String::new(),
-            Self::Black => format!("{f}0"),
-            Self::Red => format!("{f}1"),
-            Self::Green => format!("{f}2"),
-            Self::Yellow => format!("{f}3"),
-            Self::Blue => format!("{f}4"),
-            Self::Magenta => format!("{f}5"),
-            Self::Cyan => format!("{f}6"),
-            Self::White => format!("{f}7"),
-            Self::BrightBlack => format!("{f}90"),
-            Self::BrightRed => format!("{f}91"),
-            Self::BrightGreen => format!("{f}92"),
-            Self::BrightYellow => format!("{f}93"),
-            Self::BrightBlue => format!("{f}94"),
-            Self::BrightMagenta => format!("{f}95"),
-            Self::BrightCyan => format!("{f}96"),
-            Self::BrightWhite => format!("{f}97"),
-            Self::Rgb(r, g, b) => {
-                let code = if fg { "38" } else { "48" };
-                format!("{code};2;{r};{g};{b}")
-            }
+        let f = if fg { 30 } else { 40 };
+
+        if *self == Self::NoColor {
+            return String::new();
+        } else if let Self::Rgb(r, g, b) = self {
+            return format!("{};2;{r};{g};{b}", f + 8);
         }
+
+        (f + match self {
+            Self::Rgb(_, _, _) => 0,
+            Self::NoColor => 0,
+
+            Self::Black => 0,
+            Self::Red => 1,
+            Self::Green => 2,
+            Self::Yellow => 3,
+            Self::Blue => 4,
+            Self::Magenta => 5,
+            Self::Cyan => 6,
+            Self::White => 7,
+            Self::BrightBlack => 60,
+            Self::BrightRed => 61,
+            Self::BrightGreen => 62,
+            Self::BrightYellow => 63,
+            Self::BrightBlue => 64,
+            Self::BrightMagenta => 65,
+            Self::BrightCyan => 66,
+            Self::BrightWhite => 67,
+        })
+        .to_string()
     }
 
     pub fn to_ansi(&self, foreground: bool) -> String {
@@ -94,12 +100,14 @@ pub struct Style {
 #[derive(Debug, Clone, Copy)]
 pub enum Position {
     Num(u16),
+    Percent(u16),
     Center,
 }
 impl Position {
     pub fn get(&self, written: u16, frame: u16) -> u16 {
         match self {
             Self::Center => (frame - written) / 2,
+            Self::Percent(percent) => (((*percent as f32) / 100.0) * (frame as f32)) as u16,
             Self::Num(n) => *n,
         }
     }
@@ -108,19 +116,22 @@ impl Position {
 #[derive(Debug, Clone, Copy)]
 pub enum Dimension {
     Num(u16),
+    Percent(u16),
     Auto,
 }
 impl Dimension {
     pub fn get(&self, _written: u16, frame: u16) -> u16 {
         match self {
             Self::Auto => frame,
+            Self::Percent(percent) => (((*percent as f32) / 100.0) * (frame as f32)) as u16,
             Self::Num(n) => *n,
         }
     }
 
-    pub fn get_root(&self, written: u16, _frame: u16) -> u16 {
+    pub fn get_root(&self, written: u16, frame: u16) -> u16 {
         match self {
             Self::Auto => written,
+            Self::Percent(percent) => (((*percent as f32) / 100.0) * (frame as f32)) as u16,
             Self::Num(n) => *n,
         }
     }

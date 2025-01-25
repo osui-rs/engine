@@ -26,14 +26,6 @@ fn main() -> Result<()> {
 
 pub fn app() -> Ui {
     Arc::new(|frame| {
-        frame.draw(
-            &"Hello, World",
-            &Props::center().state("hover", Style {
-                color: Color::Red,
-                background: Color::Red,
-                px: 1,
-                py: 0,
-            }),
-        );
+        frame.draw(&"this is centered!", &Props::center());
     })
 }
