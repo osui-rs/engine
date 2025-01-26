@@ -7,6 +7,8 @@ use std::{io::Write, sync::Arc};
 
 pub mod prelude {
     pub use crate::{
+        elements::*,
+        func,
         style::{Color, Style},
         utils::init,
         Props, Result, Ui,
@@ -20,9 +22,13 @@ pub trait Framing {
 
 pub trait Element {
     fn render(&self) -> String;
+    fn event(&self, event: crossterm::event::Event) {
+        _ = event
+    }
 }
 
 // Types
+pub type Handler<T> = std::sync::Arc<std::sync::Mutex<T>>;
 pub type Ui = Arc<dyn Fn(&mut dyn Framing)>;
 
 #[derive(Debug, Clone)]
@@ -42,6 +48,7 @@ pub struct Console<'a> {
     height: u16,
     handle: Option<std::io::StdoutLock<'a>>,
     pub mouse_position: Option<(u16, u16)>,
+    pub event: Option<crossterm::event::Event>,
 }
 
 impl Props {
@@ -170,6 +177,10 @@ impl Framing for Console<'_> {
             )
         };
 
+        if let Some(event) = &self.event {
+            element.event(event.clone());
+        }
+
         let (x, y) = (x - style.px, y - style.py);
         let px = " ".repeat(style.px as usize);
         written.push_str(&format!("\n{}", " ".repeat(width as usize)).repeat(style.py as usize));
@@ -216,4 +227,8 @@ impl Console<'_> {
         utils::show_cursor()?;
         utils::clear()
     }
+}
+
+pub fn func<T>(t: T) -> Handler<T> {
+    std::sync::Arc::new(std::sync::Mutex::new(t))
 }

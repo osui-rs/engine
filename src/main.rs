@@ -17,7 +17,7 @@ fn main() -> Result<()> {
                 ..
             }) => console.mouse_position = Some((column, row)),
             crossterm::event::Event::Resize(_, _) => {}
-            _ => break,
+            e => console.event = Some(e),
         }
     }
 
@@ -26,6 +26,18 @@ fn main() -> Result<()> {
 
 pub fn app() -> Ui {
     Arc::new(|frame| {
-        frame.draw(&"this is centered!", &Props::center());
+        frame.draw(
+            &Button {
+                on_click: func(|| {}),
+                text: String::from("Testing"),
+            },
+            &Props::center().state(
+                "hover",
+                Style {
+                    color: Color::Red,
+                    ..Default::default()
+                },
+            ),
+        );
     })
 }

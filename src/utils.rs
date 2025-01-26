@@ -114,5 +114,6 @@ pub fn init<'a>(mouse: bool) -> crate::Result<crate::Console<'a>> {
         mouse,
         handle: None,
         mouse_position: None,
+        event: None,
     })
 }
