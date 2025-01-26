@@ -1,3 +1,5 @@
+use crossterm::event::{Event, MouseButton, MouseEvent, MouseEventKind};
+
 use crate::Element;
 
 impl Element for &str {
@@ -21,7 +23,19 @@ impl Element for Button {
     fn render(&self) -> String {
         self.text.to_owned()
     }
-    fn event(&self, _: crossterm::event::Event) {
-        (self.on_click.clone().lock().unwrap())()
+    fn event(&self, event: crossterm::event::Event) {
+        match event {
+            Event::Mouse(MouseEvent {
+                kind: MouseEventKind::Down(MouseButton::Left),
+                ..
+            }) => (self.on_click.clone().lock().unwrap())(),
+            _ => {}
+        }
+    }
+}
+
+impl Element for crate::Ui {
+    fn render(&self) -> String {
+        String::new()
     }
 }

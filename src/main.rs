@@ -25,11 +25,12 @@ fn main() -> Result<()> {
 }
 
 pub fn app() -> Ui {
-    Arc::new(|frame| {
+    let mut count = use_state(0);
+    Arc::new(move |frame| {
         frame.draw(
-            &Button {
-                on_click: func(|| {}),
-                text: String::from("Testing"),
+            &mut Button {
+                on_click: func(move || count += 1),
+                text: format!("Count: {count}"),
             },
             &Props::center().state(
                 "hover",

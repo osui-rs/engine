@@ -1,4 +1,6 @@
 pub mod elements;
+#[cfg(feature = "state")]
+pub mod state;
 pub mod style;
 pub mod utils;
 
@@ -13,11 +15,14 @@ pub mod prelude {
         utils::init,
         Props, Result, Ui,
     };
+
+    #[cfg(feature = "state")]
+    pub use crate::state::use_state;
 }
 
 // Traits
 pub trait Framing {
-    fn draw(&mut self, element: &dyn Element, props: &Props);
+    fn draw(&mut self, element: &mut dyn Element, props: &Props);
 }
 
 pub trait Element {
@@ -142,7 +147,7 @@ impl Props {
 }
 
 impl Framing for Console<'_> {
-    fn draw(&mut self, element: &dyn Element, props: &Props) {
+    fn draw(&mut self, element: &mut dyn Element, props: &Props) {
         let mut written = element.render();
 
         let (written_width, written_height) = utils::str_size(&written);

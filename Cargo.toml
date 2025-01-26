@@ -6,7 +6,11 @@ license = "Apache-2.0"
 description = "A TUI library for advanced uis"
 repository = "https://github.com/osui-rs/engine"
 homepage = "https://osui.netlify.app"
-documentation = "https://osui.netlify.app/docs/" 
+documentation = "https://osui.netlify.app/docs/"
+
+[features]
+default = ["state"]
+state = []
 
 [lib]
 name = "osmium_engine"
