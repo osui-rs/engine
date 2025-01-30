@@ -9,7 +9,6 @@ use std::{io::Write, sync::Arc};
 
 pub mod prelude {
     pub use crate::{
-        elements::*,
         func,
         style::{Color, Style},
         utils::init,
@@ -18,15 +17,20 @@ pub mod prelude {
 
     #[cfg(feature = "state")]
     pub use crate::state::use_state;
+
+    pub use crossterm::event::read;
 }
 
 // Traits
 pub trait Framing {
     fn draw(&mut self, element: &mut dyn Element, props: &Props);
+    fn draw_str(&mut self, s: &str) {
+        _ = s
+    }
 }
 
 pub trait Element {
-    fn render(&self) -> String;
+    fn render(&self, frame: &mut dyn Framing);
     fn event(&self, event: crossterm::event::Event) {
         _ = event
     }
@@ -43,7 +47,6 @@ pub struct Props {
     width: style::Dimension,
     height: style::Dimension,
     style: style::Style,
-    style_state: std::collections::HashMap<String, style::Style>,
 }
 
 /// Represents the console state, containing a frame for rendering and a mouse capture flag.
@@ -53,7 +56,6 @@ pub struct Console<'a> {
     height: u16,
     handle: Option<std::io::StdoutLock<'a>>,
     pub mouse_position: Option<(u16, u16)>,
-    pub event: Option<crossterm::event::Event>,
 }
 
 impl Props {
@@ -64,7 +66,6 @@ impl Props {
             width: style::Dimension::Auto,
             height: style::Dimension::Auto,
             style: style::Style::default(),
-            style_state: std::collections::HashMap::new(),
         }
     }
 
@@ -79,7 +80,6 @@ impl Props {
             width: style::Dimension::Auto,
             height: style::Dimension::Auto,
             style: style::Style::default(),
-            style_state: std::collections::HashMap::new(),
         }
     }
 
@@ -90,7 +90,6 @@ impl Props {
             width: style::Dimension::Auto,
             height: style::Dimension::Auto,
             style: style::Style::default(),
-            style_state: std::collections::HashMap::new(),
         }
     }
 
@@ -101,7 +100,6 @@ impl Props {
             width: style::Dimension::Auto,
             height: style::Dimension::Auto,
             style: style::Style::default(),
-            style_state: std::collections::HashMap::new(),
         }
     }
 
@@ -117,11 +115,6 @@ impl Props {
 
     pub fn style(&mut self, style: style::Style) -> Self {
         self.style = style;
-        self.clone()
-    }
-
-    pub fn state(&mut self, state: &str, style: style::Style) -> Self {
-        self.style_state.insert(state.to_string(), style);
         self.clone()
     }
 
@@ -148,7 +141,8 @@ impl Props {
 
 impl Framing for Console<'_> {
     fn draw(&mut self, element: &mut dyn Element, props: &Props) {
-        let mut written = element.render();
+        let mut written = String::new();
+        element.render(&mut written);
 
         let (written_width, written_height) = utils::str_size(&written);
 
@@ -162,36 +156,23 @@ impl Framing for Console<'_> {
             props.y.get(height, self.height),
         );
 
-        let mut style = props.style;
-
-        if let Some((mouse_x, mouse_y)) = self.mouse_position {
-            if (x..x + width).contains(&mouse_x) && (y..y + height).contains(&mouse_y) {
-                if let Some(hover_style) = props.style_state.get("hover") {
-                    style = hover_style.clone();
-                }
-            }
-        }
-
-        let ansi = if style.background == style::Color::NoColor {
-            format!("\x1b[{}m", style.color.ansi_number(true))
+        let ansi = if props.style.background == style::Color::NoColor {
+            format!("\x1b[{}m", props.style.color.ansi_number(true))
         } else {
             format!(
                 "\x1b[{};{}m",
-                style.color.ansi_number(true),
-                style.background.ansi_number(false)
+                props.style.color.ansi_number(true),
+                props.style.background.ansi_number(false)
             )
         };
 
-        if let Some(event) = &self.event {
-            element.event(event.clone());
-        }
-
-        let (x, y) = (x - style.px, y - style.py);
-        let px = " ".repeat(style.px as usize);
-        written.push_str(&format!("\n{}", " ".repeat(width as usize)).repeat(style.py as usize));
+        let (x, y) = (x - props.style.px, y - props.style.py);
+        let px = " ".repeat(props.style.px as usize);
+        written
+            .push_str(&format!("\n{}", " ".repeat(width as usize)).repeat(props.style.py as usize));
         written.insert_str(
             0,
-            &format!("{}\n", " ".repeat(width as usize)).repeat(style.py as usize),
+            &format!("{}\n", " ".repeat(width as usize)).repeat(props.style.py as usize),
         );
 
         if let Some(handle) = &mut self.handle {
@@ -231,6 +212,16 @@ impl Console<'_> {
         crossterm::terminal::disable_raw_mode()?;
         utils::show_cursor()?;
         utils::clear()
+    }
+}
+
+impl crate::Framing for String {
+    fn draw(&mut self, element: &mut dyn crate::Element, _props: &crate::Props) {
+        element.render(self);
+    }
+
+    fn draw_str(&mut self, s: &str) {
+        *self += s;
     }
 }
 
