@@ -5,14 +5,14 @@ pub mod style;
 pub mod utils;
 
 pub use std::io::Result;
-use std::{io::Write, sync::Arc};
 
 pub mod prelude {
     pub use crate::{
         func,
+        state::State,
         style::{Color, Style},
         utils::init,
-        Props, Result, Ui,
+        Framing, Props, Result, Ui,
     };
 
     #[cfg(feature = "state")]
@@ -23,7 +23,7 @@ pub mod prelude {
 
 // Traits
 pub trait Framing {
-    fn draw(&mut self, element: &mut dyn Element, props: &Props);
+    fn draw(&mut self, element: &dyn Element, props: &Props);
     fn draw_str(&mut self, s: &str) {
         _ = s
     }
@@ -38,7 +38,7 @@ pub trait Element {
 
 // Types
 pub type Handler<T> = std::sync::Arc<std::sync::Mutex<T>>;
-pub type Ui = Arc<dyn Fn(&mut dyn Framing)>;
+pub type Ui = Box<dyn Fn(&mut dyn Framing)>;
 
 #[derive(Debug, Clone)]
 pub struct Props {
@@ -50,11 +50,10 @@ pub struct Props {
 }
 
 /// Represents the console state, containing a frame for rendering and a mouse capture flag.
-pub struct Console<'a> {
+pub struct Console {
     mouse: bool,
     width: u16,
     height: u16,
-    handle: Option<std::io::StdoutLock<'a>>,
     pub mouse_position: Option<(u16, u16)>,
 }
 
@@ -139,8 +138,8 @@ impl Props {
     }
 }
 
-impl Framing for Console<'_> {
-    fn draw(&mut self, element: &mut dyn Element, props: &Props) {
+impl Framing for Console {
+    fn draw(&mut self, element: &dyn Element, props: &Props) {
         let mut written = String::new();
         element.render(&mut written);
 
@@ -175,33 +174,22 @@ impl Framing for Console<'_> {
             &format!("{}\n", " ".repeat(width as usize)).repeat(props.style.py as usize),
         );
 
-        if let Some(handle) = &mut self.handle {
-            for (i, line) in written.lines().enumerate() {
-                write!(
-                    handle,
-                    "\x1b[{};{}H{ansi}{px}{}{px}\x1b[0m",
-                    y as usize + i + 1,
-                    x + 1,
-                    line,
-                )
-                .unwrap();
-            }
-        } else {
-            panic!("Handle not found");
+        for (i, line) in written.lines().enumerate() {
+            println!(
+                "\x1b[{};{}H{ansi}{px}{}{px}\x1b[0m",
+                y as usize + i + 1,
+                x + 1,
+                line,
+            );
         }
     }
 }
 
-impl Console<'_> {
-    pub fn render(&mut self, ui: Ui) -> Result<()> {
+impl Console {
+    pub fn render(&mut self, ui: &Ui) -> Result<()> {
         (self.width, self.height) = crossterm::terminal::size()?;
-        let stdout = std::io::stdout();
-        self.handle = Some(stdout.lock());
         utils::clear()?;
         ui(self);
-        if let Some(handle) = &mut self.handle {
-            handle.flush()?;
-        }
         Ok(())
     }
 
@@ -215,8 +203,8 @@ impl Console<'_> {
     }
 }
 
-impl crate::Framing for String {
-    fn draw(&mut self, element: &mut dyn crate::Element, _props: &crate::Props) {
+impl Framing for String {
+    fn draw(&mut self, element: &dyn Element, _props: &Props) {
         element.render(self);
     }
 

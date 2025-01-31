@@ -1,21 +1,37 @@
-use std::sync::Arc;
-
 use osmium_engine::prelude::*;
 
 fn main() -> Result<()> {
-    let mut console = init(false)?;
+    let mut console = init(true)?;
 
-    let ui = app();
+    let (mut count, ui) = app();
 
-    console.render(ui.clone())?;
-
-    read()?;
+    loop {
+        console.render(&ui)?;
+        read()?;
+        count += 1;
+    }
 
     console.close()
 }
 
-pub fn app() -> Ui {
-    Arc::new(move |frame| {
-        frame.draw(&mut "test", &Props::center());
-    })
+pub fn app() -> (State<i32>, Ui) {
+    let (count, count_ui) = counter();
+
+    (
+        count,
+        Box::new(move |frame| {
+            frame.draw(&count_ui, &Props::center());
+        }),
+    )
+}
+
+pub fn counter() -> (State<i32>, Ui) {
+    let count = use_state(0);
+
+    (
+        count,
+        Box::new(move |frame| {
+            frame.draw(&format!("Events: {count}").as_str(), &Props::center());
+        }),
+    )
 }

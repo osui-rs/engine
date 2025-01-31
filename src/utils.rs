@@ -100,7 +100,7 @@ pub fn str_size(s: &str) -> (u16, u16) {
 ///
 /// # Returns
 /// A `Console` instance wrapped in a `Result`.
-pub fn init<'a>(mouse: bool) -> crate::Result<crate::Console<'a>> {
+pub fn init<'a>(mouse: bool) -> crate::Result<crate::Console> {
     crossterm::terminal::enable_raw_mode()?;
     clear()?;
     hide_cursor()?;
@@ -112,7 +112,6 @@ pub fn init<'a>(mouse: bool) -> crate::Result<crate::Console<'a>> {
         width,
         height,
         mouse,
-        handle: None,
         mouse_position: None,
     })
 }
