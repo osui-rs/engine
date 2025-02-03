@@ -3,7 +3,9 @@ use osmium_engine::prelude::*;
 fn main() -> Result<()> {
     let mut console = init(true)?;
 
-    let (mut count, ui) = app();
+    let mut count = use_state(0);
+
+    let ui = app(count);
 
     loop {
         console.render(&ui)?;
@@ -14,24 +16,8 @@ fn main() -> Result<()> {
     console.close()
 }
 
-pub fn app() -> (State<i32>, Ui) {
-    let (count, count_ui) = counter();
-
-    (
-        count,
-        Box::new(move |frame| {
-            frame.draw(&count_ui, &Props::center());
-        }),
-    )
-}
-
-pub fn counter() -> (State<i32>, Ui) {
-    let count = use_state(0);
-
-    (
-        count,
-        Box::new(move |frame| {
-            frame.draw(&format!("Events: {count}").as_str(), &Props::center());
-        }),
-    )
+pub fn app(count: State<i32>) -> Ui {
+    Box::new(move |frame| {
+        frame.draw(Box::new(format!("Events: {count}")), Props::center());
+    })
 }

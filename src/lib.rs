@@ -12,7 +12,7 @@ pub mod prelude {
         state::State,
         style::{Color, Style},
         utils::init,
-        Framing, Props, Result, Ui,
+        Props, Result, Ui,
     };
 
     #[cfg(feature = "state")]
@@ -21,16 +21,8 @@ pub mod prelude {
     pub use crossterm::event::read;
 }
 
-// Traits
-pub trait Framing {
-    fn draw(&mut self, element: &dyn Element, props: &Props);
-    fn draw_str(&mut self, s: &str) {
-        _ = s
-    }
-}
-
 pub trait Element {
-    fn render(&self, frame: &mut dyn Framing);
+    fn render(&self, frame: &mut String);
     fn event(&self, event: crossterm::event::Event) {
         _ = event
     }
@@ -38,7 +30,10 @@ pub trait Element {
 
 // Types
 pub type Handler<T> = std::sync::Arc<std::sync::Mutex<T>>;
-pub type Ui = Box<dyn Fn(&mut dyn Framing)>;
+pub type Ui = Box<dyn Fn(&mut Frame)>;
+
+// Structs
+pub struct Frame(Vec<(Box<dyn Element>, Props)>);
 
 #[derive(Debug, Clone)]
 pub struct Props {
@@ -55,6 +50,12 @@ pub struct Console {
     width: u16,
     height: u16,
     pub mouse_position: Option<(u16, u16)>,
+}
+
+impl Frame {
+    pub fn draw(&mut self, element: Box<dyn Element>, props: Props) {
+        self.0.push((element, props));
+    }
 }
 
 impl Props {
@@ -138,7 +139,27 @@ impl Props {
     }
 }
 
-impl Framing for Console {
+impl Console {
+    pub fn render(&mut self, ui: &Ui) -> Result<()> {
+        (self.width, self.height) = crossterm::terminal::size()?;
+        utils::clear()?;
+        let mut frame = Frame(Vec::new());
+        ui(&mut frame);
+        for (e, _) in frame.0 {
+            self.draw(e.as_ref(), &Props::auto());
+        }
+        Ok(())
+    }
+
+    pub fn close(self) -> Result<()> {
+        if self.mouse {
+            crossterm::execute!(std::io::stdout(), crossterm::event::DisableMouseCapture)?;
+        }
+        crossterm::terminal::disable_raw_mode()?;
+        utils::show_cursor()?;
+        utils::clear()
+    }
+
     fn draw(&mut self, element: &dyn Element, props: &Props) {
         let mut written = String::new();
         element.render(&mut written);
@@ -182,34 +203,6 @@ impl Framing for Console {
                 line,
             );
         }
-    }
-}
-
-impl Console {
-    pub fn render(&mut self, ui: &Ui) -> Result<()> {
-        (self.width, self.height) = crossterm::terminal::size()?;
-        utils::clear()?;
-        ui(self);
-        Ok(())
-    }
-
-    pub fn close(self) -> Result<()> {
-        if self.mouse {
-            crossterm::execute!(std::io::stdout(), crossterm::event::DisableMouseCapture)?;
-        }
-        crossterm::terminal::disable_raw_mode()?;
-        utils::show_cursor()?;
-        utils::clear()
-    }
-}
-
-impl Framing for String {
-    fn draw(&mut self, element: &dyn Element, _props: &Props) {
-        element.render(self);
-    }
-
-    fn draw_str(&mut self, s: &str) {
-        *self += s;
     }
 }
 

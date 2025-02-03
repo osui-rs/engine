@@ -1,13 +1,13 @@
 use crate::Element;
 
 impl Element for &str {
-    fn render(&self, frame: &mut dyn crate::Framing) {
-        frame.draw_str(self);
+    fn render(&self, frame: &mut String) {
+        *frame += self;
     }
 }
 
-impl Element for crate::Ui {
-    fn render(&self, frame: &mut dyn crate::Framing) {
-        self(frame)
+impl Element for String {
+    fn render(&self, frame: &mut String) {
+        *frame += self;
     }
 }
