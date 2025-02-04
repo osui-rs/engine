@@ -107,11 +107,5 @@ pub fn init<'a>(mouse: bool) -> crate::Result<crate::Console> {
     if mouse {
         crossterm::execute!(std::io::stdout(), crossterm::event::EnableMouseCapture)?;
     }
-    let (width, height) = crossterm::terminal::size()?;
-    Ok(crate::Console {
-        width,
-        height,
-        mouse,
-        mouse_position: None,
-    })
+    Ok(crate::Console { mouse })
 }

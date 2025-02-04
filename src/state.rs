@@ -21,6 +21,10 @@ pub fn use_state<T>(v: T) -> State<T> {
     State(Box::into_raw(Box::new(v)))
 }
 
+pub fn default_state<T: Default>() -> State<T> {
+    State(Box::into_raw(Box::new(T::default())))
+}
+
 impl<T: std::fmt::Display> std::fmt::Display for State<T> {
     /// Formats the value of the state for display.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
