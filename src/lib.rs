@@ -1,20 +1,20 @@
 pub mod frame;
+mod props;
 #[cfg(feature = "state")]
 pub mod state;
-pub mod style;
 pub mod utils;
 
 use crossterm::event::Event;
-use frame::{Area, Frame};
+use frame::Frame;
+pub use props::*;
 pub use std::io::Result;
 
 pub mod prelude {
     pub use crate::{
-        frame::{Frame, Props},
-        func,
-        style::{Color, Style},
+        frame::Frame,
+        props::{Color, Style},
         utils::init,
-        Component, Result,
+        Component, Element, Props, Result,
     };
 
     #[cfg(feature = "state")]
@@ -23,11 +23,13 @@ pub mod prelude {
     pub use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyEventKind};
 }
 
-// Types
-pub type Handler<T> = std::sync::Arc<std::sync::Mutex<T>>;
-pub type Component = Box<dyn FnMut(&Frame)>;
+pub trait Element {
+    fn render(&self, size: (u16, u16)) -> String;
+    fn event(&mut self, _event: crossterm::event::Event) {}
+    fn action(&mut self, _action: u16) {}
+}
 
-// Structs
+pub type Component = Box<dyn FnMut(&Frame)>;
 
 /// Represents the console state, containing a frame for rendering and a mouse capture flag.
 pub struct Console {
@@ -36,30 +38,16 @@ pub struct Console {
 
 impl Console {
     pub fn render(&mut self, ui: &mut Component) -> Result<()> {
-        let (width, height) = crossterm::terminal::size()?;
         utils::clear()?;
-        let mut frame = Frame::new(Area {
-            width,
-            height,
-            x: 0,
-            y: 0,
-        });
+        let mut frame = Frame::new(crossterm::terminal::size()?);
         ui(&mut frame);
         Ok(())
     }
 
     pub fn event(&mut self, ui: &mut Component, event: Event) -> Result<()> {
-        let (width, height) = crossterm::terminal::size()?;
         utils::clear()?;
-        let mut frame = Frame {
-            area: Area {
-                width,
-                height,
-                x: 0,
-                y: 0,
-            },
-            event: Some(event),
-        };
+        let mut frame = Frame::new(crossterm::terminal::size()?);
+        frame.event = Some(event);
         ui(&mut frame);
         Ok(())
     }
@@ -74,6 +62,14 @@ impl Console {
     }
 }
 
-pub fn func<T>(t: T) -> Handler<T> {
-    std::sync::Arc::new(std::sync::Mutex::new(t))
+impl Element for &str {
+    fn render(&self, _: (u16, u16)) -> String {
+        self.to_string()
+    }
+}
+
+impl Element for String {
+    fn render(&self, _: (u16, u16)) -> String {
+        self.to_owned()
+    }
 }
